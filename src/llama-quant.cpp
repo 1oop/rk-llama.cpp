@@ -324,6 +324,10 @@ static bool tensor_allows_quantization(const llama_model_quantize_params * param
     quantize &= name.find("ssm_conv1d") == std::string::npos;
     quantize &= name.find("shortconv.conv.weight") == std::string::npos;
 
+    // do not quantize clip audio conv weights, ggml_ssm_conv requires f32 kernels
+    quantize &= name.find("conv_dw.weight") == std::string::npos;
+    quantize &= name.find("a.conv1d.") == std::string::npos;
+
     // do not quantize MiniMax's indexer projection weights, they are tiny
     quantize &= name.find("indexer.k_proj.weight") == std::string::npos;
     quantize &= name.find("indexer.q_proj.weight") == std::string::npos;
@@ -1312,7 +1316,7 @@ static void llama_model_quantize_impl(const std::string & fname_inp, const std::
 
                 const int64_t n_per_row = tensor->ne[0];
                 const int64_t nrows_per_expert = tensor->ne[1];
-                const int64_t nrows_total = tensor->ne[1] * tensor->ne[2];
+                const int64_t nrows_total = tensor->ne[1] * tensor->ne[2] * tensor->ne[3];
 
                 const size_t row_size_src = ggml_row_size(tensor->type, n_per_row);
                 const size_t row_size_dst = ggml_row_size(new_type,     n_per_row);
