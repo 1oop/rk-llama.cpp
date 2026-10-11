@@ -793,6 +793,51 @@ mtmd_image_preproc_out mtmd_image_preprocessor_dyn_size::preprocess(const clip_i
 }
 
 //
+// mtmd_image_preprocessor_gemma4v
+//
+
+// ref: get_aspect_ratio_preserving_size in image_processing_gemma4.py (transformers)
+mtmd_image_preproc_out mtmd_image_preprocessor_gemma4v::preprocess(const clip_image_u8 & img) const {
+    const int side_mult = hparams.patch_size * hparams.n_merge;
+
+    // soft token budget, HF default is 280
+    int max_soft_tokens = 280;
+    if (hparams.custom_image_max_tokens > 0) {
+        max_soft_tokens = std::clamp(hparams.custom_image_max_tokens, 70, 1120);
+    }
+
+    const int64_t max_patches = (int64_t) max_soft_tokens * hparams.n_merge * hparams.n_merge;
+    const int64_t target_px   = max_patches * hparams.patch_size * hparams.patch_size;
+
+    const int height = img.get_size().height;
+    const int width  = img.get_size().width;
+
+    const double factor = std::sqrt((double) target_px / ((double) height * width));
+    int target_height = (int) std::floor(factor * height / side_mult) * side_mult;
+    int target_width  = (int) std::floor(factor * width  / side_mult) * side_mult;
+
+    // edge cases where one or both dimensions round to 0
+    const int max_side_length = (int) (max_patches / (hparams.n_merge * hparams.n_merge)) * side_mult;
+    if (target_height == 0 && target_width == 0) {
+        throw std::runtime_error("image is too small to fit the patch budget");
+    } else if (target_height == 0) {
+        target_height = side_mult;
+        target_width  = std::min((int) std::floor((double) width / height) * side_mult, max_side_length);
+    } else if (target_width == 0) {
+        target_width  = side_mult;
+        target_height = std::min((int) std::floor((double) height / width) * side_mult, max_side_length);
+    }
+
+    clip_image_u8 resized_image;
+    img_tool::resize(img, resized_image, {target_width, target_height},
+                        hparams.image_resize_algo,
+                        PAD_NONE);
+    mtmd_image_preproc_out output;
+    output.append(hparams, resized_image, true);
+    return output;
+}
+
+//
 // mtmd_image_preprocessor_glm5v
 //
 
