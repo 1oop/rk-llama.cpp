@@ -1,0 +1,23 @@
+{
+  "skill_name": "fork-model-adaptation",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "适配 https://www.modelscope.cn/models/<org>/<some-new-embedding-model> 这个模型,转成 GGUF 并确认能用",
+      "expected_output": "Checks conversion/__init__.py for existing arch support before writing code; downloads model including modules.json and 1_Pooling/config.json; converts text GGUF (+ mmproj if multimodal); builds; verifies numerically against HF fp32 reference (cosine similarity, incl. long-text SWA case); quantizes and re-verifies; reports cosine table. Does not push to upstream.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "把上游 llama.cpp 的最新更新同步到 rknpu2 分支,合并完确认 RK 后端和我们适配过的模型还能正常用",
+      "expected_output": "Adds/fetches upstream remote, merges upstream/master into rknpu2; resolves conflicts keeping ggml/src/ggml-rknpu2 and fork-specific fixes, taking upstream for shared code; rebuilds default and GGML_RKNPU2=ON configurations; re-runs embedding verification on at least one text and one multimodal model; commits and pushes only to the user's fork remote.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "我转换的模型 llama-quantize 到 Q8_0 时在 conv1d 权重上断言崩溃了,帮我看看",
+      "expected_output": "Recognizes the 4D-tensor nrows_total issue and the f32 requirement of ggml_ssm_conv/ggml_conv_2d kernels; checks src/llama-quant.cpp exclusions; fixes or re-applies the fork's fix if lost during an upstream sync.",
+      "files": []
+    }
+  ]
+}
